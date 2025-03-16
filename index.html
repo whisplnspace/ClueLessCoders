@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .result img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Emotion Detection</h1>
+        <div class="upload-box">
+            <input type="file" id="imageInput" accept="image/*">
+            <p>Drag & drop an image or click to upload.</p>
+        </div>
+        <div class="result" id="result">
+            <!-- Results will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const resultDiv = document.getElementById('result');
+
+        imageInput.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const imageData = e.target.result.split(',')[1]; // Get base64 data
+                    analyzeEmotion(imageData);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function analyzeEmotion(imageData) {
+            fetch('/analyze_emotion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: imageData }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else if (data.warning) {
+                    resultDiv.innerHTML = `<p style="color: orange;">Warning: ${data.warning}</p>`;
+                } else {
+                    let resultsHtml = '<h2>Results:</h2>';
+                    data.results.forEach((result, index) => {
+                        resultsHtml += `
+                            <div>
+                                <p><strong>Face ${index + 1}:</strong></p>
+                                <p>Emotion: ${result.emotion}</p>
+                                <p>Stress Status: ${result.stress}</p>
+                                <p>Bounding Box: (x: ${result.bounding_box.x}, y: ${result.bounding_box.y}, w: ${result.bounding_box.w}, h: ${result.bounding_box.h})</p>
+                            </div>
+                        `;
+                    });
+                    resultDiv.innerHTML = resultsHtml;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
